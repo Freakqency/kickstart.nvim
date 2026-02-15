@@ -1,0 +1,3 @@
+WRN 2026-02-15T16:02:56.077 ?.24771    server_start:199: Failed to start server: operation not permitted: /var/folders/p0/ct0m1k5x1vx_1qym50fnxmjm0000gp/T/nvim.surya/4G57zM/nvim.24771.0
+WRN 2026-02-15T16:02:59.494 ?.24781    server_start:199: Failed to start server: operation not permitted: /var/folders/p0/ct0m1k5x1vx_1qym50fnxmjm0000gp/T/nvim.surya/4LQYuM/nvim.24781.0
+WRN 2026-02-15T16:07:07.786 ?.25526    server_start:199: Failed to start server: operation not permitted: /var/folders/p0/ct0m1k5x1vx_1qym50fnxmjm0000gp/T/nvim.surya/gtAI9d/nvim.25526.0
