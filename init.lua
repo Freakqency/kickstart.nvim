@@ -829,28 +829,32 @@ require('lazy').setup({
     -- change the command in the config to whatever the name of that colorscheme is.
     --
     -- If you want to see what colorschemes are already installed, you can use `:Telescope colorscheme`.
-    'catppuccin/nvim',
-    name = 'catppuccin',
+    'EdenEast/nightfox.nvim',
     priority = 1000, -- Make sure to load this before all the other start plugins.
     config = function()
-      require('catppuccin').setup {
-        flavour = 'auto', -- latte, frappe, macchiato, mocha
-        background = {
-          light = 'latte',
-          dark = 'mocha',
-        },
-      }
+      require('nightfox').setup {}
 
-      vim.cmd.colorscheme 'catppuccin'
+      local function apply_nightfox_theme()
+        local scheme = vim.o.background == 'light' and 'dayfox' or 'carbonfox'
+        vim.cmd.colorscheme(scheme)
+      end
+
+      apply_nightfox_theme()
+
+      vim.api.nvim_create_autocmd('OptionSet', {
+        group = vim.api.nvim_create_augroup('nightfox-auto-theme', { clear = true }),
+        pattern = 'background',
+        callback = apply_nightfox_theme,
+      })
 
       -- Explicit commands to switch and reload the theme immediately.
-      vim.api.nvim_create_user_command('CatppuccinLatte', function()
+      vim.api.nvim_create_user_command('NightfoxDayfox', function()
         vim.o.background = 'light'
-        vim.cmd.colorscheme 'catppuccin'
+        apply_nightfox_theme()
       end, {})
-      vim.api.nvim_create_user_command('CatppuccinMocha', function()
+      vim.api.nvim_create_user_command('NightfoxCarbonfox', function()
         vim.o.background = 'dark'
-        vim.cmd.colorscheme 'catppuccin'
+        apply_nightfox_theme()
       end, {})
     end,
   },
