@@ -600,9 +600,11 @@ require('lazy').setup({
       --  See `:help lsp-config` for information about keys and how to configure
       ---@type table<string, vim.lsp.Config>
       local servers = {
-        -- clangd = {},
-        -- gopls = {},
-        -- pyright = {},
+        clangd = {},
+        gopls = {},
+        bashls = {},
+        basedpyright = {},
+        ts_ls = {},
         -- rust_analyzer = {},
         --
         -- Some languages (like typescript) have entire language plugins that can be useful:
@@ -655,10 +657,24 @@ require('lazy').setup({
       --    :Mason
       --
       -- You can press `g?` for help in this menu.
-      local ensure_installed = vim.tbl_keys(servers or {})
-      vim.list_extend(ensure_installed, {
-        -- You can add other tools here that you want Mason to install
-      })
+      local mason_package_by_server = {
+        bashls = 'bash-language-server',
+        lua_ls = 'lua-language-server',
+        ts_ls = 'typescript-language-server',
+      }
+      local ensure_installed = {}
+      local seen_tools = {}
+      local add_tool = function(tool)
+        if seen_tools[tool] then
+          return
+        end
+        seen_tools[tool] = true
+        table.insert(ensure_installed, tool)
+      end
+      for server_name, _ in pairs(servers or {}) do
+        add_tool(mason_package_by_server[server_name] or server_name)
+      end
+      add_tool 'stylua' -- Used to format Lua code
 
       require('mason-tool-installer').setup { ensure_installed = ensure_installed }
 
@@ -780,6 +796,9 @@ require('lazy').setup({
       },
 
       completion = {
+        menu = {
+          auto_show = true,
+        },
         -- By default, you may press `<c-space>` to show the documentation.
         -- Optionally, set `auto_show = true` to show the documentation after a delay.
         documentation = { auto_show = false, auto_show_delay_ms = 500 },
@@ -898,14 +917,14 @@ require('lazy').setup({
     -- [[ Configure Treesitter ]] See `:help nvim-treesitter-intro`
     config = function()
       -- ensure basic parser are installed
-      local parsers = { 'bash', 'c', 'diff', 'html', 'lua', 'luadoc', 'markdown', 'markdown_inline', 'query', 'vim', 'vimdoc' }
+      local parsers = { 'bash', 'c', 'diff', 'go', 'html', 'lua', 'luadoc', 'markdown', 'markdown_inline', 'python', 'query', 'tsx', 'typescript', 'vim', 'vimdoc' }
       require('nvim-treesitter').install(parsers)
 
       ---@param buf integer
       ---@param language string
       local function treesitter_try_attach(buf, language)
         -- check if parser exists and load it
-        if not vim.treesitter.language.add(language) then return end
+        if not vim.treesitter.language.add(language) then return false end
         -- enables syntax highlighting and other treesitter features
         vim.treesitter.start(buf, language)
 
@@ -920,8 +939,11 @@ require('lazy').setup({
 
         -- enables treesitter based indentation
         if has_indent_query then vim.bo.indentexpr = "v:lua.require'nvim-treesitter'.indentexpr()" end
+
+        return true
       end
 
+      local fold_filetypes = { bash = true, c = true, go = true, python = true, sh = true, typescript = true, typescriptreact = true }
       local available_parsers = require('nvim-treesitter').get_available()
       vim.api.nvim_create_autocmd('FileType', {
         callback = function(args)
@@ -934,13 +956,33 @@ require('lazy').setup({
 
           if vim.tbl_contains(installed_parsers, language) then
             -- enable the parser if it is installed
-            treesitter_try_attach(buf, language)
+            if treesitter_try_attach(buf, language) and fold_filetypes[filetype] then
+              vim.opt_local.foldmethod = 'expr'
+              vim.opt_local.foldexpr = 'v:lua.vim.treesitter.foldexpr()'
+              vim.opt_local.foldenable = true
+              vim.opt_local.foldlevel = 0
+              vim.opt_local.foldlevelstart = 0
+            end
           elseif vim.tbl_contains(available_parsers, language) then
             -- if a parser is available in `nvim-treesitter` auto install it, and enable it after the installation is done
-            require('nvim-treesitter').install(language):await(function() treesitter_try_attach(buf, language) end)
+            require('nvim-treesitter').install(language):await(function()
+              if treesitter_try_attach(buf, language) and fold_filetypes[filetype] then
+                vim.opt_local.foldmethod = 'expr'
+                vim.opt_local.foldexpr = 'v:lua.vim.treesitter.foldexpr()'
+                vim.opt_local.foldenable = true
+                vim.opt_local.foldlevel = 0
+                vim.opt_local.foldlevelstart = 0
+              end
+            end)
           else
             -- try to enable treesitter features in case the parser exists but is not available from `nvim-treesitter`
-            treesitter_try_attach(buf, language)
+            if treesitter_try_attach(buf, language) and fold_filetypes[filetype] then
+              vim.opt_local.foldmethod = 'expr'
+              vim.opt_local.foldexpr = 'v:lua.vim.treesitter.foldexpr()'
+              vim.opt_local.foldenable = true
+              vim.opt_local.foldlevel = 0
+              vim.opt_local.foldlevelstart = 0
+            end
           end
         end,
       })
