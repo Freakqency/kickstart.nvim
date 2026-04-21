@@ -99,10 +99,10 @@ vim.g.have_nerd_font = false
 --  For more options, you can see `:help option-list`
 
 -- Make line numbers default
-vim.o.number = true
+-- vim.o.number = true
 -- You can also add relative line numbers, to help with jumping.
 --  Experiment for yourself to see if you like it!
--- vim.o.relativenumber = true
+vim.o.relativenumber = true
 
 -- Enable mouse mode, can be useful for resizing splits for example!
 vim.o.mouse = 'a'
@@ -118,6 +118,9 @@ vim.schedule(function() vim.o.clipboard = 'unnamedplus' end)
 
 -- Enable break indent
 vim.o.breakindent = true
+vim.o.tabstop = 2
+vim.o.shiftwidth = 2
+vim.o.softtabstop = 2
 
 -- Enable undo/redo changes even after closing and reopening a file
 vim.o.undofile = true
@@ -665,9 +668,7 @@ require('lazy').setup({
       local ensure_installed = {}
       local seen_tools = {}
       local add_tool = function(tool)
-        if seen_tools[tool] then
-          return
-        end
+        if seen_tools[tool] then return end
         seen_tools[tool] = true
         table.insert(ensure_installed, tool)
       end
@@ -829,33 +830,65 @@ require('lazy').setup({
     -- change the command in the config to whatever the name of that colorscheme is.
     --
     -- If you want to see what colorschemes are already installed, you can use `:Telescope colorscheme`.
-    'EdenEast/nightfox.nvim',
+    'catppuccin/nvim',
+    name = 'catppuccin',
     priority = 1000, -- Make sure to load this before all the other start plugins.
     config = function()
-      require('nightfox').setup {}
+      require('catppuccin').setup {
+        flavour = 'auto',
+        background = {
+          light = 'latte',
+          dark = 'mocha',
+        },
+      }
 
-      local function apply_nightfox_theme()
-        local scheme = vim.o.background == 'light' and 'dayfox' or 'carbonfox'
-        vim.cmd.colorscheme(scheme)
+      local function detect_system_background()
+        if vim.fn.has 'macunix' == 1 then
+          local output = vim.fn.system { 'defaults', 'read', '-g', 'AppleInterfaceStyle' }
+          if vim.v.shell_error == 0 and output:match 'Dark' then return 'dark' end
+          return 'light'
+        end
+        return vim.o.background
       end
 
-      apply_nightfox_theme()
+      local function apply_catppuccin_theme()
+        vim.cmd.colorscheme 'catppuccin'
+      end
+
+      local function sync_background_with_system()
+        local system_background = detect_system_background()
+        if vim.o.background ~= system_background then
+          vim.o.background = system_background
+          return
+        end
+        apply_catppuccin_theme()
+      end
+
+      sync_background_with_system()
+
+      local theme_group = vim.api.nvim_create_augroup('catppuccin-auto-theme', { clear = true })
 
       vim.api.nvim_create_autocmd('OptionSet', {
-        group = vim.api.nvim_create_augroup('nightfox-auto-theme', { clear = true }),
+        group = theme_group,
         pattern = 'background',
-        callback = apply_nightfox_theme,
+        callback = apply_catppuccin_theme,
+      })
+
+      vim.api.nvim_create_autocmd({ 'VimEnter', 'FocusGained', 'VimResume' }, {
+        group = theme_group,
+        callback = sync_background_with_system,
       })
 
       -- Explicit commands to switch and reload the theme immediately.
-      vim.api.nvim_create_user_command('NightfoxDayfox', function()
+      vim.api.nvim_create_user_command('CatppuccinLatte', function()
         vim.o.background = 'light'
-        apply_nightfox_theme()
+        apply_catppuccin_theme()
       end, {})
-      vim.api.nvim_create_user_command('NightfoxCarbonfox', function()
+      vim.api.nvim_create_user_command('CatppuccinMocha', function()
         vim.o.background = 'dark'
-        apply_nightfox_theme()
+        apply_catppuccin_theme()
       end, {})
+      vim.api.nvim_create_user_command('CatppuccinSyncSystem', sync_background_with_system, {})
     end,
   },
 
@@ -991,6 +1024,30 @@ require('lazy').setup({
         end,
       })
     end,
+  },
+
+  {
+    'windwp/nvim-autopairs',
+    event = 'InsertEnter',
+    opts = {
+      enabled = function(bufnr) return true end, -- control if auto-pairs should be enabled when attaching to a buffer
+      disable_filetype = { 'TelescopePrompt', 'spectre_panel', 'snacks_picker_input' },
+      disable_in_macro = true, -- disable when recording or executing a macro
+      disable_in_visualblock = false, -- disable when insert after visual block mode
+      disable_in_replace_mode = true,
+      ignored_next_char = [=[[%w%%%'%[%"%.%`%$]]=],
+      enable_moveright = true,
+      enable_afterquote = true, -- add bracket pairs after quote
+      enable_check_bracket_line = true, --- check bracket in same line
+      enable_bracket_in_quote = true, --
+      enable_abbr = false, -- trigger abbreviation
+      break_undo = true, -- switch for basic rule break undo sequence
+      check_ts = false,
+      map_cr = true,
+      map_bs = true, -- map the <BS> key
+      map_c_h = false, -- Map the <C-h> key to delete a pair
+      map_c_w = false, -- map <c-w> to delete a pair if possible
+    },
   },
 
   {
